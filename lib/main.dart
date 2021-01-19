@@ -1,8 +1,10 @@
 import 'dart:convert';
-import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 import 'package:virtual_guide/UnescoSite.dart';
+
+import 'Services.dart';
 
 void main() {
   runApp(MyApp());
@@ -14,7 +16,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Virtual Tourist Guide',
-      theme: ThemeData.dark(),
+      // theme: ThemeData.dark(),
       home: HomeScreen(),
     );
   }
@@ -27,33 +29,18 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<UnescoSite> unescoSites = [];
+  List<UnescoSite> filteredSites = [];
+  var isSearching = false;
 
-  // void initState() {
-  //   super.initState();
-  //   unescoSites = getSites();
-  // }
-
-  // Future<String> getJson() {
-  //   return DefaultAssetBundle.of(context).loadString('load_json/world-heritage-list-india-fields.json');
-  // }
-
-  // Future<String> getJson() {
-  //   return rootBundle.loadString('load_json/world-heritage-list-india-fields.json');
-  // }
-
-  //   List<UnescoSite> getSites()  {
-  //     var jsonData = jsonDecode( getJson() );
-
-  //     List<UnescoSite> unescoSites = [];
-
-  //     for (var site in jsonData) {
-  //       UnescoSite unescoSite = UnescoSite.fromJson(site);
-
-  //       unescoSites.add(unescoSite);
-  //     }
-
-  //     return unescoSites;
-  //   }
+  void initState() {
+    super.initState();
+    Services.getUnescoSites().then((sites) {
+      setState(() {
+        unescoSites = sites;
+        filteredSites = unescoSites;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,33 +51,53 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
       ),
       body: Container(
-        child: Center(
-          child: FutureBuilder(
-            future: DefaultAssetBundle.of(context)
-                .loadString('load_json/world-heritage-list-india-fields.json'),
-            builder: (context, snapshot) {
-              var jsonData = jsonDecode(snapshot.data.toString());
-
-              for (var site in jsonData) {
-                UnescoSite unescoSite = UnescoSite.fromJson(site);
-
-                unescoSites.add(unescoSite);
-              }
-
-              return ListView.builder(
-                itemCount: unescoSites.length,
+        child: Column(
+          children: [
+            TextField(
+              decoration: InputDecoration(
+                contentPadding: EdgeInsets.all(10.0),
+                hintText: 'Enter Name or Location',
+              ),
+              onChanged: (string) {
+                if (string == '') {
+                  isSearching = false;
+                  setState(() {});
+                } else {
+                  isSearching = true;
+                  setState(() {
+                    // print('inside setstate + $string');
+                    filteredSites = unescoSites
+                        .where(
+                          (u) => (u.site
+                              .toLowerCase()
+                              .contains(string.toLowerCase())),
+                        )
+                        .toList();
+                  });
+                }
+              },
+            ),
+            isSearching
+                ? Container()
+                : Container(
+                    color: Colors.redAccent,
+                    height: 200.0,
+                  ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: filteredSites.length,
                 itemBuilder: (context, index) {
                   return ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Colors.tealAccent,
                     ),
-                    title: Text(unescoSites[index].site),
-                    subtitle: Text(unescoSites[index].category),
+                    title: Text(filteredSites[index].site),
+                    subtitle: Text(filteredSites[index].category),
                   );
                 },
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
